@@ -1,5 +1,5 @@
 #Royce & Fu replication
-install.packages("deSolve")
+#April 24 2024
 
 #define SIR Model function
 library(deSolve)
