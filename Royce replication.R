@@ -1,50 +1,111 @@
-#Royce & Fu replication
-#April 24 2024
+#Royce & Fu (2020) replication
+#April 24, 2024 (v2)
 
-#define SIR Model function
 library(deSolve)
+library(ggplot2)
+
 sir_model <- function(time, state, parameters) {
   with(as.list(c(state, parameters)), {
-    # Differential equations
-    dSw <- bw - beta_w * Sw * Iw - mw * Sw
-    dIw <- beta_w * Sw * Iw - gamma_w * Iw - mw * Iw
-    dRw <- gamma_w * Iw - mw * Rw
+    dS_w <- b_w - beta_w * S_w * I_w - m_w * S_w
+    dI_w <- beta_w * S_w * I_w - gamma_w * I_w - m_w * I_w
+    dR_w <- gamma_w * I_w - m_w * R_w
     
-    dSd <- bd - beta_d * Sd * Id - pd * Sd * Iw - beta_d * Sd * Td - md * Sd
-    dId <- beta_d * Sd * Id + pd * Sd * Iw - mu * Id - gamma_d * Id - md * Id
-    dTd <- mu * Id + beta_d * Sd * Td - gamma_d * Td - md * Td
-    dRd <- gamma_d * Id + gamma_d * Td - md * Rd
+    dS_d <- b_d - beta_d * S_d * I_d - p_d * S_d * I_w - beta_d * S_d * T_d - m_d * S_d
+    dI_d <- beta_d * S_d * I_d + p_d * S_d * I_w - mu * I_d - gamma_d * I_d - m_d * I_d
+    dT_d <- mu * I_d + beta_d * S_d * T_d - gamma_d * T_d - m_d * T_d
+    dR_d <- gamma_d * I_d + gamma_d * T_d - m_d * R_d
     
-    dSh <- bh - beta_h * Sh * Ih - ph * Sh * Td - mh * Sh
-    dIh <- beta_h * Sh * Ih + ph * Sh * Td - gamma_h * Ih - mh * Ih
-    dRh <- gamma_h * Ih - mh * Rh
+    dS_h <- b_h - beta_h * S_h * I_h - p_h * S_h * T_d - m_h * S_h
+    dI_h <- beta_h * S_h * I_h + p_h * S_h * T_d - gamma_h * I_h - m_h * I_h
+    dR_h <- gamma_h * I_h - m_h * R_h 
     
-    return(list(c(dSw, dIw, dRw, dSd, dId, dTd, dRd, dSh, dIh, dRh)))
-  })
+    #return the rate of change
+    return(list(c(dS_w, dI_w, dR_w, dS_d, dI_d, dT_d, dR_d, dS_h, dI_h, dR_h)))
+    })
 }
 
+# Parameters as described in the paper
+parameters <- c(b_w = 1, # wild birth rate
+                m_w = 1, # wild background death rate
+                b_d = 1, # domestic birth rate
+                m_d = 1, # domestic background death rate
+                b_h = 0.0118, # human birth rate
+                m_h = 0.009,# human mortality rate
+                beta_w = 0.89, # wild transmission rate (*5) WHY TIMES FIVE??
+                gamma_w = 0.981, # wild recovery rate 
+                beta_d = 0.89, # domestic transmission rate (*5) WHY TIMES FIVE??  
+                gamma_d = 0.981, # domestic recovery rate
+                p_d = 0.51, # wild-domestic transmission rate
+                beta_h = 0.078, # human transmission rate
+                gamma_h = 0.091, # human recovery rate
+                p_h = 0.207, # human-domestic transmission rate
+                mu = 0.499 # mutation rate in domestic
+                )
 
-#set parameters
-initial_state <- c(Sw = 0.5, Iw = 0.5, Rw = 0, Sd = 1, Id = 0, Td = 0, Rd = 0, Sh = 1, Ih = 0, Rh = 0)
-parameters <- c(beta_w = 0.3, gamma_w = 0.1, mw = 0.01, 
-                beta_d = 0.5, gamma_d = 0.1, md = 0.01, pd = 0.02, mu = 0.02,
-                beta_h = 0.4, gamma_h = 0.1, mh = 0.01, ph = 0.02,
-                bw = 0.02, bd = 0.02, bh = 0.02)
+# Initial state values
+initial_state <- c(S_w = 0.5, # From paper
+                   I_w = 0.5, # From paper
+                   R_w = 0, # Assumed, not specified in the paper, assuming outbreak onset
+                   S_d = 1, # Assumed, not specified
+                   I_d = 0, # Assumed, not specified
+                   T_d = 0, # Assumed, not specified, no initial transmissible cases assumed (intermediate hosts infected with human-transmissible strain)
+                   R_d = 0, # Assumed, not specified, assuming outbreak onset
+                   S_h = 1, # Assumed, all humans initially susceptible
+                   I_h = 0, # Assumed, no initially infected humans
+                   R_h = 0 # Assumed, no initially recovered humans
+                   )
+# time
+times <- seq(0, 1000, by = 1)
 
-#solve the differential equations
-time <- seq(0, 200, by = 1)  # from 0 to 200 days
-output <- ode(y = initial_state, times = time, func = sir_model, parms = parameters)
+# Solve the differential equations
+out <- ode(y = initial_state, times = times, func = sir_model, parms = parameters)
 
+# Create a data frame for plotting
+out_df <- as.data.frame(out)
+out_df$time <- out[, "time"]
 
-#plot
+#reshape
+library(reshape2)
+out_long <- melt(out_df, id.vars = "time", variable.name = "Compartment", value.name = "Population")
 
-matplot(time, output[, c("Sh", "Ih", "Rh")], type = "l", col = c("green", "red", "blue"), lty = 1,
-        xlab = "Time (days)", ylab = "Population Proportion",
-        main = "SIR Model Dynamics in Human Population")
-legend("right", legend = c("Susceptible", "Infected", "Recovered"), col = c("green", "red", "blue"), lty = 1)
+# Plot
+#plot3 - combine ======
+library(gridExtra)
 
-library(ggplot2)
-time <- seq(0, 200, by = 1)  # from 0 to 200 days
-output <- ode(y = initial_state, times = time, func = sir_model, parms = parameters)
-output_df <- as.data.frame(output)
-output_df$time <- output_df$time
+#add species group
+out_long$SpeciesGroup <- ifelse(grepl("w", out_long$Compartment), "Wild",
+                                    ifelse(grepl("d", out_long$Compartment), "Domestic", "Human"))
+
+#add state
+out_long$State <- ifelse(grepl("T", out_long$Compartment), "T",
+                             substr(out_long$Compartment, 1, 1))
+
+# Define color palette for S, I, T, R
+colors <- c("S" = "blue", "I" = "red", "T" = "pink", "R" = "green")
+
+plot_wild <- ggplot(data = subset(out_long, SpeciesGroup == "Wild"), aes(x = time, y = Population, color = State)) +
+  geom_line() +
+  labs(title = "Wild Hosts", x = "Time (days)", y = "Population Proportion") +
+  scale_color_manual(values = colors) +
+  theme_minimal() +
+  scale_x_continuous(limits = c(0, 50)) +
+  scale_y_continuous(limits = c(-0.2, 1.2))
+
+plot_domestic <- ggplot(data = subset(out_long, SpeciesGroup == "Domestic"), aes(x = time, y = Population, color = State)) +
+  geom_line() +
+  labs(title = "Domestic Animals", x = "Time (days)", y = "Population Proportion") +
+  scale_color_manual(values = colors) +
+  theme_minimal() +
+  scale_x_continuous(limits = c(0, 50)) +
+  scale_y_continuous(limits = c(-0.2, 1.2))
+
+plot_human <- ggplot(data = subset(out_long, SpeciesGroup == "Human"), aes(x = time, y = Population, color = State)) +
+  geom_line() +
+  labs(title = "Humans", x = "Time (days)", y = "Population Proportion") +
+  scale_color_manual(values = colors) +
+  theme_minimal() #+
+  #scale_x_continuous(limits = c(0, 1000)) +
+  #scale_y_continuous(limits = c(0, 1))
+
+# Combine the plots into one figure
+combined_plot <- grid.arrange(plot_wild, plot_domestic, plot_human, ncol = 3)
