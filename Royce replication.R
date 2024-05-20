@@ -1,5 +1,5 @@
 #Royce & Fu (2020) replication
-#April 24, 2024 (v2)
+#April 24, 2024 (v3)
 
 library(deSolve)
 library(ggplot2)
