@@ -6,18 +6,18 @@ library(ggplot2)
 
 sir_model <- function(time, state, parameters) {
   with(as.list(c(state, parameters)), {
-    dS_w <- b_w - beta_w * S_w * I_w - m_w * S_w
-    dI_w <- beta_w * S_w * I_w - gamma_w * I_w - m_w * I_w
-    dR_w <- gamma_w * I_w - m_w * R_w
+    dS_w <- b_w - (beta_w * S_w * I_w) - (m_w * S_w)
+    dI_w <- (beta_w * S_w * I_w) - (gamma_w * I_w) - (m_w * I_w)
+    dR_w <- (gamma_w * I_w) - (m_w * R_w)
     
-    dS_d <- b_d - beta_d * S_d * I_d - p_d * S_d * I_w - beta_d * S_d * T_d - m_d * S_d
-    dI_d <- beta_d * S_d * I_d + p_d * S_d * I_w - mu * I_d - gamma_d * I_d - m_d * I_d
-    dT_d <- mu * I_d + beta_d * S_d * T_d - gamma_d * T_d - m_d * T_d
-    dR_d <- gamma_d * I_d + gamma_d * T_d - m_d * R_d
+    dS_d <- b_d - (beta_d * S_d * I_d) - (p_d * S_d * I_w) - (beta_d * S_d * T_d) - (m_d * S_d)
+    dI_d <- (beta_d * S_d * I_d) + (p_d * S_d * I_w) - (mu * I_d) - (gamma_d * I_d) - (m_d * I_d)
+    dT_d <- (mu * I_d) + (beta_d * S_d * T_d) - (gamma_d * T_d) - (m_d * T_d)
+    dR_d <- (gamma_d * I_d) + (gamma_d * T_d) - (m_d * R_d)
     
-    dS_h <- b_h - beta_h * S_h * I_h - p_h * S_h * T_d - m_h * S_h
-    dI_h <- beta_h * S_h * I_h + p_h * S_h * T_d - gamma_h * I_h - m_h * I_h
-    dR_h <- gamma_h * I_h - m_h * R_h 
+    dS_h <- b_h - (beta_h * S_h * I_h) - (p_h * S_h * T_d) - (m_h * S_h)
+    dI_h <- (beta_h * S_h * I_h) + (p_h * S_h * T_d) - (gamma_h * I_h) - (m_h * I_h)
+    dR_h <- (gamma_h * I_h) - (m_h * R_h) 
     
     #return the rate of change
     return(list(c(dS_w, dI_w, dR_w, dS_d, dI_d, dT_d, dR_d, dS_h, dI_h, dR_h)))
@@ -29,11 +29,11 @@ parameters <- c(b_w = 1, # wild birth rate
                 m_w = 1, # wild background death rate
                 b_d = 1, # domestic birth rate
                 m_d = 1, # domestic background death rate
-                b_h = 0.0118, # human birth rate
-                m_h = 0.009,# human mortality rate
-                beta_w = 0.89, # wild transmission rate (*5) WHY TIMES FIVE??
+                b_h = 0.00003252, # human birth rate # used daily rate
+                m_h = 0.00002477,# human mortality rate # used daily rate
+                beta_w = 0.89, # wild transmission rate 
                 gamma_w = 0.981, # wild recovery rate 
-                beta_d = 0.89, # domestic transmission rate (*5) WHY TIMES FIVE??  
+                beta_d = 0.89, # domestic transmission rate 
                 gamma_d = 0.981, # domestic recovery rate
                 p_d = 0.51, # wild-domestic transmission rate
                 beta_h = 0.078, # human transmission rate
@@ -109,3 +109,4 @@ plot_human <- ggplot(data = subset(out_long, SpeciesGroup == "Human"), aes(x = t
 
 # Combine the plots into one figure
 combined_plot <- grid.arrange(plot_wild, plot_domestic, plot_human, ncol = 3)
+
